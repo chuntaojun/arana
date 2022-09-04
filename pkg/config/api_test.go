@@ -46,7 +46,9 @@ func TestInit(t *testing.T) {
 		args    args
 		wantErr assert.ErrorAssertionFunc
 	}{
-		{"Init_1", args{"file", config.Options{}}, assert.Error},
+		{"Init_1", args{"file", config.Options{
+			StoreName: "file",
+		}}, assert.Error},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -88,9 +90,7 @@ func Test_api(t *testing.T) {
 
 	mockFileStore2 := testdata.NewMockStoreOperate(ctrl)
 	mockFileStore2.EXPECT().Name().AnyTimes().Return("file")
-	assert.Panics(t, func() {
-		config.Register(mockFileStore2)
-	}, "StoreOperate=[file] already exist")
+	assert.Error(t, config.Register(mockFileStore2), "StoreOperate=[file] already exist")
 }
 
 func Test_Init(t *testing.T) {
@@ -103,12 +103,13 @@ func Test_Init(t *testing.T) {
 	defer ctrl.Finish()
 	mockFileStore := testdata.NewMockStoreOperate(ctrl)
 	mockFileStore.EXPECT().Name().Times(2).Return("fake")
-	mockFileStore.EXPECT().Init(options).Return(nil)
-	err := config.Init(options, "fake")
+	mockFileStore.EXPECT().Init(gomock.Any()).Return(nil)
+	err := config.InitStoreOperate(options)
 	assert.Error(t, err)
 
-	config.Register(mockFileStore)
-	err = config.Init(options, "fake")
+	err = config.Register(mockFileStore)
+	assert.NoError(t, err)
+	err = config.InitStoreOperate(options)
 	assert.NoError(t, err)
 
 	store := config.GetStoreOperate()
